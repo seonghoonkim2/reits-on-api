@@ -1,6 +1,6 @@
 name = "reits-on-api"
 main = "src/index.ts"
-compatibility_date = "2026-01-01"
+compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat"]
 
 # D1 (생성: wrangler d1 create reitson → 출력된 database_id를 아래에 붙여넣기)
