@@ -1,0 +1,5 @@
+# 로컬 개발용 비밀값 예시 — 복사해서 .dev.vars 로 저장(깃 무시됨)
+DATA_GO_KR_KEY=여기에_data.go.kr_키
+OPENDART_KEY=여기에_OpenDART_키
+MOLIT_KEY=여기에_MOLIT_키
+ADMIN_TOKEN=dev-token

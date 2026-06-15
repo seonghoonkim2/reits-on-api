@@ -1,0 +1,25 @@
+{
+  "name": "reits-on-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "리츠온 REITs ON 백엔드 (Cloudflare Workers + D1) — 공개 소스 일배치 API",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute reitson --file db/schema.sql",
+    "db:init:remote": "wrangler d1 execute reitson --remote --file db/schema.sql",
+    "seed:build": "node scripts/build-seed-sql.mjs",
+    "seed:load": "wrangler d1 execute reitson --file db/seed.sql",
+    "seed:load:remote": "wrangler d1 execute reitson --remote --file db/seed.sql",
+    "refresh:local": "curl -s -X POST localhost:8787/admin/refresh -H \"Authorization: Bearer dev-token\""
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0",
+    "@cloudflare/workers-types": "^4.20240909.0",
+    "typescript": "^5.6.0"
+  }
+}

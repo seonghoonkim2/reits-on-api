@@ -1,0 +1,27 @@
+name = "reits-on-api"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 (생성: wrangler d1 create reitson → 출력된 database_id를 아래에 붙여넣기)
+[[d1_databases]]
+binding = "DB"
+database_name = "reitson"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# KV (생성: wrangler kv namespace create CACHE → id 붙여넣기)
+[[kv_namespaces]]
+binding = "CACHE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# 환경 변수(비밀 아님). 비밀키는 `wrangler secret put` 으로:
+#   wrangler secret put DATA_GO_KR_KEY
+#   wrangler secret put OPENDART_KEY
+#   wrangler secret put MOLIT_KEY
+#   wrangler secret put ADMIN_TOKEN
+[vars]
+ALLOW_ORIGIN = "https://seonghoonkim2.github.io"
+
+# 일배치 스케줄(UTC). 평일 19:30 KST=10:30 UTC 시세/시장, 2시간마다 공시
+[triggers]
+crons = ["30 10 * * 1-5", "0 */2 * * *"]
