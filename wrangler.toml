@@ -7,12 +7,12 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "reitson"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "bed60500-4095-46f1-bc0d-3b7732ec3ed5"
 
 # KV (생성: wrangler kv namespace create CACHE → id 붙여넣기)
 [[kv_namespaces]]
 binding = "CACHE"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "e2ae295836f84a759f9c259ab8b02bf5"
 
 # 환경 변수(비밀 아님). 비밀키는 `wrangler secret put` 으로:
 #   wrangler secret put DATA_GO_KR_KEY

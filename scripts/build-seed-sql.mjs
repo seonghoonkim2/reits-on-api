@@ -12,7 +12,8 @@ const seed = JSON.parse(m[1]);
 const q = (v) => v === null || v === undefined ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`;
 const n = (v) => v === null || v === undefined || v === '' ? 'NULL' : Number(v);
 
-let sql = '-- 자동 생성: build-seed-sql.mjs\nBEGIN TRANSACTION;\n\n';
+// 주의: D1 remote는 SQL 트랜잭션(BEGIN/COMMIT) 미허용 → 사용하지 않음(각 문은 ON CONFLICT로 idempotent)
+let sql = '-- 자동 생성: build-seed-sql.mjs\n\n';
 
 for (const r of seed.reits) {
   const stockCode = /^\d{6}$/.test(r.ticker) ? r.ticker : null;
@@ -30,7 +31,7 @@ sql += `\nINSERT INTO market_snapshots (as_of,total_reits,total_aum_tn,listed_re
      q(JSON.stringify(mk.sectorAum)), q(JSON.stringify(mk.growth)), q('seed:KAREIT ' + mk.asOf)].join(',')
   + `)\nON CONFLICT(as_of) DO NOTHING;\n`;
 
-sql += '\nCOMMIT;\n';
+sql += '\n';
 
 fs.mkdirSync('db', { recursive: true });
 fs.writeFileSync('db/seed.sql', sql, 'utf8');
