@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { runAllCollectors } from './collectors';
+import { runAllCollectors, collectFilings } from './collectors';
 
 export interface Env {
   DB: D1Database;
@@ -140,13 +140,60 @@ app.get('/v1/filings', async (c) => {
   return c.json({ filings: (rows.results || []).map((f: any) => ({ ...f, category: parseJson(f.category, []) })) });
 });
 
+// ---- 제휴/광고 클릭 집계 (KV 카운터) ----
+// 프론트의 trackCta()가 sendBeacon(POST) 또는 GET 으로 호출. CORS 미들웨어가 ACAO 처리.
+// 키 형식: cnt|<ev>|<YYYY-MM-DD>|<tab>|<broker>  (120일 TTL)
+async function track(c: any) {
+  const ev = (c.req.query('ev') || 'cta').slice(0, 24);
+  const tab = (c.req.query('tab') || '').slice(0, 24);
+  const broker = (c.req.query('broker') || '').slice(0, 48);
+  const day = new Date().toISOString().slice(0, 10);
+  const key = ['cnt', ev, day, tab, broker].join('|');
+  try {
+    const cur = Number(await c.env.CACHE.get(key)) || 0;
+    await c.env.CACHE.put(key, String(cur + 1), { expirationTtl: 60 * 60 * 24 * 120 });
+  } catch { /* noop */ }
+  return new Response(null, { status: 204 });
+}
+app.post('/v1/track', track);
+app.get('/v1/track', track);
+
+// ---- 클릭 집계 조회 (관리자) ----
+app.get('/v1/stats', async (c) => {
+  const auth = c.req.header('Authorization') || '';
+  if (!c.env.ADMIN_TOKEN || auth !== `Bearer ${c.env.ADMIN_TOKEN}`) {
+    return c.json({ error: 'unauthorized' }, 401);
+  }
+  const list = await c.env.CACHE.list({ prefix: 'cnt|' });
+  const rows: any[] = [];
+  const byBroker: Record<string, number> = {};
+  const byTab: Record<string, number> = {};
+  let total = 0;
+  for (const k of list.keys) {
+    const v = Number(await c.env.CACHE.get(k.name)) || 0;
+    const [, ev, date, tab, broker] = k.name.split('|');
+    rows.push({ ev, date, tab, broker, count: v });
+    total += v;
+    if (broker) byBroker[broker] = (byBroker[broker] || 0) + v;
+    if (tab) byTab[tab] = (byTab[tab] || 0) + v;
+  }
+  return c.json({ total, byBroker, byTab, rows });
+});
+
 // ---- admin: manual refresh ----
 app.post('/admin/refresh', async (c) => {
   const auth = c.req.header('Authorization') || '';
   if (!c.env.ADMIN_TOKEN || auth !== `Bearer ${c.env.ADMIN_TOKEN}`) {
     return c.json({ error: 'unauthorized' }, 401);
   }
-  const result = await runAllCollectors(c.env);
+  // 무료 플랜 서브리퀘스트 한도 대응: ?job=filings&offset=&n= 로 공시만 청크 백필 가능
+  const job = c.req.query('job');
+  let result: any;
+  if (job === 'filings') {
+    result = { filings: await collectFilings(c.env, { offset: Number(c.req.query('offset') || 0), n: Number(c.req.query('n') || 8) }) };
+  } else {
+    result = await runAllCollectors(c.env);
+  }
   await c.env.CACHE.delete('market:latest');
   await c.env.CACHE.delete('reits:list');
   return c.json({ ok: true, result });
