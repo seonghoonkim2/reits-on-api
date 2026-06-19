@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { runAllCollectors, collectFilings } from './collectors';
+import { savePushSub, pushNewFilings } from './push';
 
 export interface Env {
   DB: D1Database;
@@ -9,6 +10,7 @@ export interface Env {
   OPENDART_KEY?: string;
   MOLIT_KEY?: string;
   ADMIN_TOKEN?: string;
+  VAPID_PRIVATE_KEY?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -180,6 +182,24 @@ app.get('/v1/stats', async (c) => {
   return c.json({ total, byBroker, byTab, rows });
 });
 
+// ---- 웹 푸시 구독 등록 ----
+app.post('/v1/push/subscribe', async (c) => {
+  try {
+    const sub = await c.req.json();
+    const ok = await savePushSub(c.env, sub);
+    return c.json({ ok });
+  } catch (e: any) {
+    return c.json({ ok: false, error: (e && e.message) || 'bad request' }, 400);
+  }
+});
+
+// ---- admin: 푸시 수동 발송(테스트용) ----
+app.post('/admin/push', async (c) => {
+  const auth = c.req.header('Authorization') || '';
+  if (!c.env.ADMIN_TOKEN || auth !== `Bearer ${c.env.ADMIN_TOKEN}`) return c.json({ error: 'unauthorized' }, 401);
+  return c.json({ ok: true, result: await pushNewFilings(c.env) });
+});
+
 // ---- admin: manual refresh ----
 app.post('/admin/refresh', async (c) => {
   const auth = c.req.header('Authorization') || '';
@@ -238,6 +258,7 @@ export default {
     ctx.waitUntil(runAllCollectors(env).then(async () => {
       await env.CACHE.delete('market:latest');
       await env.CACHE.delete('reits:list');
+      try { await pushNewFilings(env); } catch (e) { /* noop */ }
     }));
   },
 };
